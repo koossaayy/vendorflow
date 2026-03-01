@@ -5,7 +5,6 @@ namespace App\Traits;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Permission;
 use App\Models\Role;
-
 trait HasRoles
 {
     /**
@@ -15,19 +14,17 @@ trait HasRoles
     {
         return $this->belongsToMany(Role::class);
     }
-
     /**
      * Assign a role to the user.
      */
     public function assignRole(string $roleName): void
     {
         $role = Role::where('name', $roleName)->first();
-        if ($role && ! $this->hasRole($roleName)) {
+        if ($role && !$this->hasRole($roleName)) {
             $this->roles()->attach($role);
             HandleInertiaRequests::clearAuthCache($this->id);
         }
     }
-
     /**
      * Remove a role from the user.
      */
@@ -39,7 +36,6 @@ trait HasRoles
             HandleInertiaRequests::clearAuthCache($this->id);
         }
     }
-
     /**
      * Check if user has a specific role.
      */
@@ -47,7 +43,6 @@ trait HasRoles
     {
         return $this->roles()->where('name', $roleName)->exists();
     }
-
     /**
      * Check if user has any of the given roles.
      */
@@ -55,7 +50,6 @@ trait HasRoles
     {
         return $this->roles()->whereIn('name', $roles)->exists();
     }
-
     /**
      * Check if user is super admin.
      */
@@ -63,7 +57,6 @@ trait HasRoles
     {
         return $this->hasRole(Role::SUPER_ADMIN);
     }
-
     /**
      * Check if user is ops manager.
      */
@@ -71,7 +64,6 @@ trait HasRoles
     {
         return $this->hasRole(Role::OPS_MANAGER);
     }
-
     /**
      * Check if user is finance manager.
      */
@@ -79,7 +71,6 @@ trait HasRoles
     {
         return $this->hasRole(Role::FINANCE_MANAGER);
     }
-
     /**
      * Check if user is a vendor.
      */
@@ -87,7 +78,6 @@ trait HasRoles
     {
         return $this->hasRole(Role::VENDOR);
     }
-
     /**
      * Check if user is staff (not a vendor).
      */
@@ -95,7 +85,6 @@ trait HasRoles
     {
         return $this->hasAnyRole([Role::SUPER_ADMIN, Role::OPS_MANAGER, Role::FINANCE_MANAGER]);
     }
-
     /**
      * Check if user has a specific permission.
      */
@@ -105,16 +94,13 @@ trait HasRoles
         if ($this->isSuperAdmin()) {
             return true;
         }
-
         foreach ($this->roles as $role) {
             if ($role->hasPermission($permission)) {
                 return true;
             }
         }
-
         return false;
     }
-
     /**
      * Get the user's primary role.
      */
@@ -122,17 +108,14 @@ trait HasRoles
     {
         return $this->roles()->first();
     }
-
     /**
      * Get role name for display.
      */
     public function getRoleDisplayName(): string
     {
         $role = $this->getPrimaryRole();
-
-        return $role ? $role->display_name : 'No Role';
+        return $role ? $role->display_name : __('No Role');
     }
-
     /**
      * Scope a query to only include users with a given role.
      *
