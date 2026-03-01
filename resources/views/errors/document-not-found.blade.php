@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Document Not Found</title>
+    <title>{{ __('Document Not Found') }}</title>
     <style>
         :root {
             --bg-primary: #f8fbff;
@@ -108,9 +108,9 @@
 
 <body>
 <div class="card">
-    <div class="icon">DOC</div>
-    <h1>Document File Not Found</h1>
-    <p>The requested document is unavailable on the server right now.</p>
+    <div class="icon">{{ __('DOC') }}</div>
+    <h1>{{ __('Document File Not Found') }}</h1>
+    <p>{{ __('The requested document is unavailable on the server right now.') }}</p>
     @if(isset($document))
         <div class="filename">{{ $document->file_name ?? 'Unknown' }}</div>
     @endif
