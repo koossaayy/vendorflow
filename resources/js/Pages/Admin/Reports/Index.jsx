@@ -1,140 +1,95 @@
 import { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { AdminLayout, PageHeader, Card, StatCard, Button, FormSelect, AppIcon } from '@/Components';
-
-export default function ReportsIndex({ stats = {} }) {
-    const [dateRange, setDateRange] = useState('this_month');
-    const { auth } = usePage().props;
-    const can = auth?.can || {};
-
-    const reportTypes = [
-        {
-            id: 'vendor_summary',
-            title: 'Vendor Summary',
-            description: 'Overview of all vendors by status, compliance, and performance',
-            icon: 'vendors',
-            permission: 'vendors.view',
-            route: '/admin/reports/vendor-summary',
-        },
-        {
-            id: 'compliance_report',
-            title: 'Compliance Report',
-            description: 'Detailed compliance status and rule violations',
-            icon: 'compliance',
-            permission: 'compliance.view',
-            route: '/admin/reports/compliance',
-        },
-        {
-            id: 'payment_report',
-            title: 'Payment Report',
-            description: 'Payment requests, approvals, and disbursements',
-            icon: 'payments',
-            permission: 'payments.view',
-            route: '/admin/reports/payment',
-        },
-        {
-            id: 'document_expiry',
-            title: 'Document Expiry Report',
-            description: 'Documents expiring within selected date range',
-            icon: 'documents',
-            permission: 'documents.view',
-            route: '/admin/reports/document-expiry',
-        },
-        {
-            id: 'performance_report',
-            title: 'Performance Report',
-            description: 'Vendor performance scores and trends',
-            icon: 'performance',
-            permission: 'vendors.view',
-            route: '/admin/reports/performance',
-        },
-        {
-            id: 'audit_trail',
-            title: 'Audit Trail Report',
-            description: 'Complete history of all system activities',
-            icon: 'audit',
-            permission: 'audit.view',
-            route: '/admin/audit',
-        },
-    ];
-
-    const allowedReports = reportTypes.filter(
-        (report) => !report.permission || can[report.permission]
-    );
-
-    const dateOptions = [
-        { value: 'today', label: 'Today' },
-        { value: 'this_week', label: 'This Week' },
-        { value: 'this_month', label: 'This Month' },
-        { value: 'this_quarter', label: 'This Quarter' },
-        { value: 'this_year', label: 'This Year' },
-    ];
-
-    const header = (
-        <PageHeader
-            title="Reports"
-            subtitle="Generate and download reports"
-            actions={<FormSelect value={dateRange} onChange={setDateRange} options={dateOptions} />}
-        />
-    );
-
-    return (
-        <AdminLayout title="Reports" activeNav="Reports" header={header}>
+export default function ReportsIndex({
+  stats = {}
+}) {
+  const [dateRange, setDateRange] = useState('this_month');
+  const {
+    auth
+  } = usePage().props;
+  const can = auth?.can || {};
+  const reportTypes = [{
+    id: 'vendor_summary',
+    title: t('Vendor Summary'),
+    description: t('Overview of all vendors by status, compliance, and performance'),
+    icon: 'vendors',
+    permission: 'vendors.view',
+    route: '/admin/reports/vendor-summary'
+  }, {
+    id: 'compliance_report',
+    title: t('Compliance Report'),
+    description: t('Detailed compliance status and rule violations'),
+    icon: 'compliance',
+    permission: 'compliance.view',
+    route: '/admin/reports/compliance'
+  }, {
+    id: 'payment_report',
+    title: t('Payment Report'),
+    description: t('Payment requests, approvals, and disbursements'),
+    icon: 'payments',
+    permission: 'payments.view',
+    route: '/admin/reports/payment'
+  }, {
+    id: 'document_expiry',
+    title: t('Document Expiry Report'),
+    description: t('Documents expiring within selected date range'),
+    icon: 'documents',
+    permission: 'documents.view',
+    route: '/admin/reports/document-expiry'
+  }, {
+    id: 'performance_report',
+    title: t('Performance Report'),
+    description: t('Vendor performance scores and trends'),
+    icon: 'performance',
+    permission: 'vendors.view',
+    route: '/admin/reports/performance'
+  }, {
+    id: 'audit_trail',
+    title: t('Audit Trail Report'),
+    description: t('Complete history of all system activities'),
+    icon: 'audit',
+    permission: 'audit.view',
+    route: '/admin/audit'
+  }];
+  const allowedReports = reportTypes.filter(report => !report.permission || can[report.permission]);
+  const dateOptions = [{
+    value: 'today',
+    label: t('Today')
+  }, {
+    value: 'this_week',
+    label: t('This Week')
+  }, {
+    value: 'this_month',
+    label: t('This Month')
+  }, {
+    value: 'this_quarter',
+    label: t('This Quarter')
+  }, {
+    value: 'this_year',
+    label: t('This Year')
+  }];
+  const header = <PageHeader title={t('Reports')} subtitle={t('Generate and download reports')} actions={<FormSelect value={dateRange} onChange={setDateRange} options={dateOptions} />} />;
+  return <AdminLayout title={t('Reports')} activeNav={t('Reports')} header={header}>
             <div className="space-y-8">
                 {/* Quick Stats - from backend */}
                 <div className="grid md:grid-cols-5 gap-4">
-                    <StatCard
-                        label="Total Vendors"
-                        value={stats.total_vendors || 0}
-                        icon="vendors"
-                        color="primary"
-                    />
-                    <StatCard
-                        label="Active Vendors"
-                        value={stats.active_vendors || 0}
-                        icon="success"
-                        color="success"
-                    />
-                    <StatCard
-                        label="Compliance Rate"
-                        value={`${stats.compliance_rate || 0}%`}
-                        icon="compliance"
-                        color="info"
-                    />
-                    <StatCard
-                        label="Pending Payments"
-                        value={stats.pending_payments || 0}
-                        icon="clock"
-                        color="warning"
-                    />
-                    <StatCard
-                        label="Total Paid"
-                        value={`INR ${((stats.total_paid || 0) / 100000).toFixed(1)}L`}
-                        icon="payments"
-                        color="success"
-                    />
+                    <StatCard label="Total Vendors" value={stats.total_vendors || 0} icon="vendors" color="primary" />
+                    <StatCard label="Active Vendors" value={stats.active_vendors || 0} icon="success" color="success" />
+                    <StatCard label="Compliance Rate" value={`${stats.compliance_rate || 0}%`} icon="compliance" color="info" />
+                    <StatCard label="Pending Payments" value={stats.pending_payments || 0} icon="clock" color="warning" />
+                    <StatCard label="Total Paid" value={`INR ${((stats.total_paid || 0) / 100000).toFixed(1)}L`} icon="payments" color="success" />
                 </div>
 
                 {/* Available Reports */}
-                <Card title="Available Reports">
-                    {allowedReports.length > 0 ? (
-                        <div className="p-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {allowedReports.map((report) => (
-                                <div
-                                    key={report.id}
-                                    className="p-5 rounded-xl bg-(--color-bg-secondary) border border-(--color-border-secondary) hover:border-(--color-brand-primary-light) hover:shadow-lg transition-all cursor-pointer group"
-                                >
+                <Card title={t('Available Reports')}>
+                    {allowedReports.length > 0 ? <div className="p-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {allowedReports.map(report => <div key={report.id} className="p-5 rounded-xl bg-(--color-bg-secondary) border border-(--color-border-secondary) hover:border-(--color-brand-primary-light) hover:shadow-lg transition-all cursor-pointer group">
                                     <div className="flex items-start gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-gradient-primary text-(--color-text-primary) flex items-center justify-center shadow-token-primary group-hover:scale-110 transition-transform">
-                                            <AppIcon
-                                                name={report.icon}
-                                                className="h-6 w-6"
-                                                fallback={
-                                                    <span className="text-xs font-semibold uppercase tracking-wide">
+                                            <AppIcon name={report.icon} className="h-6 w-6" fallback={<span className="text-xs font-semibold uppercase tracking-wide">
                                                         {report.icon}
-                                                    </span>
-                                                }
-                                            />
+                                                    </span>} />
                                         </div>
                                         <div className="flex-1">
                                             <h3 className="text-(--color-text-primary) font-semibold mb-1">
@@ -144,88 +99,73 @@ export default function ReportsIndex({ stats = {} }) {
                                                 {report.description}
                                             </p>
                                             <div className="flex gap-2 mt-3">
-                                                {report.route ? (
-                                                    <Link href={report.route}>
+                                                {report.route ? <Link href={report.route}>
                                                         <Button variant="ghost" size="sm">
-                                                            View
+                                                            {t('View')}
                                                         </Button>
-                                                    </Link>
-                                                ) : (
-                                                    <Button variant="ghost" size="sm" disabled>
-                                                        View
-                                                    </Button>
-                                                )}
-                                                {can['reports.export'] && report.route && (
-                                                    <a
-                                                        href={`/admin/reports/export/${report.id.replace('_report', '')}`}
-                                                    >
+                                                    </Link> : <Button variant="ghost" size="sm" disabled>
+                                                        {t('View')}
+                                                    </Button>}
+                                                {can['reports.export'] && report.route && <a href={`/admin/reports/export/${report.id.replace('_report', '')}`}>
                                                         <Button variant="secondary" size="sm">
-                                                            Export CSV
+                                                            {t('Export CSV')}
                                                         </Button>
-                                                    </a>
-                                                )}
+                                                    </a>}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-8 text-center text-(--color-text-tertiary)">
-                            No reports available for your role.
-                        </div>
-                    )}
+                                </div>)}
+                        </div> : <div className="p-8 text-center text-(--color-text-tertiary)">
+                            {t('No reports available for your role.')}
+                        </div>}
                 </Card>
 
                 {/* Scheduled Jobs */}
-                <Card title="Scheduled Jobs">
+                <Card title={t('Scheduled Jobs')}>
                     <div className="p-4">
                         <p className="text-(--color-text-tertiary) text-sm mb-4">
-                            These commands run automatically but can also be triggered manually:
+                            {t('These commands run automatically but can also be triggered manually:')}
                         </p>
                         <div className="grid md:grid-cols-3 gap-4">
                             <div className="relative p-4 rounded-xl overflow-hidden shadow-lg shadow-token-sm border border-(--color-brand-primary-light)">
-                                <div
-                                    className="absolute inset-0 opacity-50"
-                                    style={{ background: 'var(--gradient-primary)' }}
-                                />
+                                <div className="absolute inset-0 opacity-50" style={{
+                background: 'var(--gradient-primary)'
+              }} />
                                 <div className="relative z-10 text-(--color-text-primary)">
-                                    <div className="font-semibold mb-1">Compliance Evaluation</div>
+                                    <div className="font-semibold mb-1">{t('Compliance Evaluation')}</div>
                                     <div className="text-xs text-(--color-text-secondary) mb-2">
-                                        Runs daily at 2:00 AM
+                                        {t('Runs daily at 2:00 AM')}
                                     </div>
                                     <code className="text-xs bg-(--color-bg-primary)/60 px-2 py-1 rounded block text-(--color-text-primary)">
-                                        php artisan vendors:evaluate-compliance
+                                        {t('php artisan vendors:evaluate-compliance')}
                                     </code>
                                 </div>
                             </div>
                             <div className="relative p-4 rounded-xl overflow-hidden shadow-token-success border border-(--color-success)">
-                                <div
-                                    className="absolute inset-0 opacity-50"
-                                    style={{ background: 'var(--gradient-success)' }}
-                                />
+                                <div className="absolute inset-0 opacity-50" style={{
+                background: 'var(--gradient-success)'
+              }} />
                                 <div className="relative z-10 text-(--color-text-primary)">
-                                    <div className="font-semibold mb-1">Expiry Reminders</div>
+                                    <div className="font-semibold mb-1">{t('Expiry Reminders')}</div>
                                     <div className="text-xs text-(--color-text-secondary) mb-2">
-                                        Runs daily at 8:00 AM
+                                        {t('Runs daily at 8:00 AM')}
                                     </div>
                                     <code className="text-xs bg-(--color-bg-primary)/60 px-2 py-1 rounded block text-(--color-text-primary)">
-                                        php artisan vendors:expiry-reminders
+                                        {t('php artisan vendors:expiry-reminders')}
                                     </code>
                                 </div>
                             </div>
                             <div className="relative p-4 rounded-xl overflow-hidden shadow-token-warning border border-(--color-warning)">
-                                <div
-                                    className="absolute inset-0 opacity-50"
-                                    style={{ background: 'var(--gradient-warning)' }}
-                                />
+                                <div className="absolute inset-0 opacity-50" style={{
+                background: 'var(--gradient-warning)'
+              }} />
                                 <div className="relative z-10 text-(--color-text-primary)">
-                                    <div className="font-semibold mb-1">Weekly Summary</div>
+                                    <div className="font-semibold mb-1">{t('Weekly Summary')}</div>
                                     <div className="text-xs text-(--color-text-secondary) mb-2">
-                                        Runs every Monday
+                                        {t('Runs every Monday')}
                                     </div>
                                     <code className="text-xs bg-(--color-bg-primary)/60 px-2 py-1 rounded block text-(--color-text-primary)">
-                                        php artisan vendors:weekly-summary
+                                        {t('php artisan vendors:weekly-summary')}
                                     </code>
                                 </div>
                             </div>
@@ -233,6 +173,5 @@ export default function ReportsIndex({ stats = {} }) {
                     </div>
                 </Card>
             </div>
-        </AdminLayout>
-    );
+        </AdminLayout>;
 }
