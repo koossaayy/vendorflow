@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-
 class AuthenticatedSessionController extends Controller
 {
     /**
@@ -19,48 +18,32 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Login', [
-            'status' => session('status'),
-        ]);
+        return Inertia::render('Auth/Login', ['status' => session('status')]);
     }
-
     /**
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         /** @var \App\Models\User $user */
         $user = $request->user();
-
         // Guard vendor access for restricted lifecycle states.
         if ($user?->isVendor()) {
             $vendor = $user->vendor;
-            $blockedStates = [
-                Vendor::STATUS_SUSPENDED,
-                Vendor::STATUS_TERMINATED,
-                Vendor::STATUS_REJECTED,
-            ];
-
+            $blockedStates = [Vendor::STATUS_SUSPENDED, Vendor::STATUS_TERMINATED, Vendor::STATUS_REJECTED];
             if ($vendor && in_array($vendor->status, $blockedStates, true)) {
                 HandleInertiaRequests::clearAuthCache($user->id);
                 Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
-
-                return back()->withErrors([
-                    'email' => "Your vendor account is currently {$vendor->status}. Please contact support.",
-                ])->onlyInput('email');
+                return back()->withErrors(['email' => __('Your vendor account is currently :status. Please contact support.', ['status' => $vendor->status])])->onlyInput('email');
             }
         }
-
         HandleInertiaRequests::clearAuthCache($user->id);
         $request->session()->regenerate();
-
         return redirect()->intended(route('dashboard'));
     }
-
     /**
      * Destroy an authenticated session.
      */
@@ -71,13 +54,9 @@ class AuthenticatedSessionController extends Controller
         if ($user) {
             HandleInertiaRequests::clearAuthCache($user->id);
         }
-
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
-
         return redirect('/');
     }
 }
