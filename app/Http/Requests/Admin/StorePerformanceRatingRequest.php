@@ -6,7 +6,6 @@ use App\Models\PerformanceMetric;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Validator;
-
 class StorePerformanceRatingRequest extends FormRequest
 {
     /**
@@ -17,7 +16,6 @@ class StorePerformanceRatingRequest extends FormRequest
         // Add specific permission check if needed, e.g., $user->can('rate-vendors')
         return Auth::check();
     }
-
     /**
      * Get the validation rules that apply to the request.
      *
@@ -25,16 +23,8 @@ class StorePerformanceRatingRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'ratings' => 'required|array|min:1',
-            'ratings.*.metric_id' => 'required|integer|distinct|exists:performance_metrics,id',
-            'ratings.*.score' => 'required|integer|min:0',
-            'ratings.*.notes' => 'nullable|string|max:500',
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
-        ];
+        return ['ratings' => 'required|array|min:1', 'ratings.*.metric_id' => 'required|integer|distinct|exists:performance_metrics,id', 'ratings.*.score' => 'required|integer|min:0', 'ratings.*.notes' => 'nullable|string|max:500', 'period_start' => 'required|date', 'period_end' => 'required|date|after_or_equal:period_start'];
     }
-
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -42,26 +32,17 @@ class StorePerformanceRatingRequest extends FormRequest
             if ($ratings->isEmpty()) {
                 return;
             }
-
             $metricIds = $ratings->pluck('metric_id')->filter()->unique()->values();
             if ($metricIds->isEmpty()) {
                 return;
             }
-
-            $metrics = PerformanceMetric::query()
-                ->whereIn('id', $metricIds)
-                ->pluck('max_score', 'id');
-
+            $metrics = PerformanceMetric::query()->whereIn('id', $metricIds)->pluck('max_score', 'id');
             foreach ($ratings as $index => $rating) {
                 $metricId = (int) ($rating['metric_id'] ?? 0);
                 $score = (int) ($rating['score'] ?? 0);
                 $maxScore = (int) ($metrics[$metricId] ?? 0);
-
                 if ($maxScore > 0 && $score > $maxScore) {
-                    $validator->errors()->add(
-                        "ratings.{$index}.score",
-                        "Score cannot be greater than {$maxScore} for the selected metric."
-                    );
+                    $validator->errors()->add("ratings.{$index}.score", __('Score cannot be greater than :maxScore for the selected metric.', ['maxScore' => $maxScore]));
                 }
             }
         });

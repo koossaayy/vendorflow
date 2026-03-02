@@ -9,7 +9,6 @@ use App\Models\DocumentType;
 use App\Models\Vendor;
 use App\Models\VendorDocument;
 use Carbon\Carbon;
-
 class ComplianceService
 {
     /**
@@ -17,20 +16,13 @@ class ComplianceService
      */
     public function evaluateAllVendors(): array
     {
-        $vendors = Vendor::whereIn('status', [
-            Vendor::STATUS_APPROVED,
-            Vendor::STATUS_ACTIVE,
-            Vendor::STATUS_SUSPENDED,
-        ])->get();
-
+        $vendors = Vendor::whereIn('status', [Vendor::STATUS_APPROVED, Vendor::STATUS_ACTIVE, Vendor::STATUS_SUSPENDED])->get();
         $results = [];
         foreach ($vendors as $vendor) {
             $results[$vendor->id] = $this->evaluateVendor($vendor);
         }
-
         return $results;
     }
-
     /**
      * Evaluate a single vendor's compliance.
      */
@@ -40,46 +32,25 @@ class ComplianceService
         $results = [];
         $totalPenalty = 0;
         $hasBlockingFailure = false;
-
         foreach ($rules as $rule) {
             $result = $this->evaluateRule($vendor, $rule);
             $results[] = $result;
-
             if ($result['status'] === ComplianceResult::STATUS_FAIL) {
                 $totalPenalty += $rule->penalty_points;
-
                 if ($rule->blocks_payment || $rule->blocks_activation) {
                     $hasBlockingFailure = true;
                 }
             }
         }
-
         // Calculate compliance score (100 - penalty, min 0)
         $complianceScore = max(0, 100 - $totalPenalty);
-
-        $openFlags = ComplianceFlag::where('vendor_id', $vendor->id)
-            ->where('status', 'open')
-            ->count();
-
+        $openFlags = ComplianceFlag::where('vendor_id', $vendor->id)->where('status', 'open')->count();
         // Determine compliance status
         $complianceStatus = $this->determineComplianceStatus($complianceScore, $hasBlockingFailure, $openFlags);
-
         // Update vendor
-        $vendor->update([
-            'compliance_score' => $complianceScore,
-            'compliance_status' => $complianceStatus,
-        ]);
-
-        return [
-            'vendor_id' => $vendor->id,
-            'score' => $complianceScore,
-            'status' => $complianceStatus,
-            'rules_evaluated' => count($results),
-            'failures' => collect($results)->where('status', ComplianceResult::STATUS_FAIL)->count(),
-            'open_flags' => $openFlags,
-        ];
+        $vendor->update(['compliance_score' => $complianceScore, 'compliance_status' => $complianceStatus]);
+        return ['vendor_id' => $vendor->id, 'score' => $complianceScore, 'status' => $complianceStatus, 'rules_evaluated' => count($results), 'failures' => collect($results)->where('status', ComplianceResult::STATUS_FAIL)->count(), 'open_flags' => $openFlags];
     }
-
     /**
      * Evaluate a single rule against a vendor.
      */
@@ -88,7 +59,6 @@ class ComplianceService
         $status = ComplianceResult::STATUS_PASS;
         $details = '';
         $metadata = [];
-
         switch ($rule->type) {
             case ComplianceRule::TYPE_DOCUMENT_REQUIRED:
                 $result = $this->checkRequiredDocuments($vendor, $rule);
@@ -96,115 +66,48 @@ class ComplianceService
                 $details = $result['details'];
                 $metadata = $result['metadata'];
                 break;
-
             case ComplianceRule::TYPE_DOCUMENT_EXPIRY:
                 $result = $this->checkDocumentExpiry($vendor, $rule);
                 $status = $result['status'];
                 $details = $result['details'];
                 $metadata = $result['metadata'];
                 break;
-
             case ComplianceRule::TYPE_PERFORMANCE_THRESHOLD:
                 $result = $this->checkPerformanceThreshold($vendor, $rule);
                 $status = $result['status'];
                 $details = $result['details'];
                 break;
-
             default:
                 // Custom rules can be handled here
                 break;
         }
-
         // Store immutable result (append-only history).
-        $complianceResult = ComplianceResult::create([
-            'vendor_id' => $vendor->id,
-            'compliance_rule_id' => $rule->id,
-            'status' => $status,
-            'details' => $details,
-            'metadata' => $metadata,
-            'evaluated_at' => now(),
-            'resolved_at' => $status === ComplianceResult::STATUS_PASS ? now() : null,
-        ]);
-
+        $complianceResult = ComplianceResult::create(['vendor_id' => $vendor->id, 'compliance_rule_id' => $rule->id, 'status' => $status, 'details' => $details, 'metadata' => $metadata, 'evaluated_at' => now(), 'resolved_at' => $status === ComplianceResult::STATUS_PASS ? now() : null]);
         $this->syncComplianceFlag($vendor, $rule, $complianceResult, $status, $details, $metadata);
-
-        return [
-            'rule_id' => $rule->id,
-            'rule_name' => $rule->name,
-            'status' => $status,
-            'details' => $details,
-        ];
+        return ['rule_id' => $rule->id, 'rule_name' => $rule->name, 'status' => $status, 'details' => $details];
     }
-
-    protected function syncComplianceFlag(
-        Vendor $vendor,
-        ComplianceRule $rule,
-        ComplianceResult $complianceResult,
-        string $status,
-        string $details,
-        array $metadata
-    ): void {
+    protected function syncComplianceFlag(Vendor $vendor, ComplianceRule $rule, ComplianceResult $complianceResult, string $status, string $details, array $metadata): void
+    {
         if ($status === ComplianceResult::STATUS_PASS) {
-            ComplianceFlag::where('vendor_id', $vendor->id)
-                ->where('compliance_rule_id', $rule->id)
-                ->where('status', 'open')
-                ->update([
-                    'status' => 'resolved',
-                    'resolved_at' => now(),
-                    'resolved_by' => null,
-                ]);
-
+            ComplianceFlag::where('vendor_id', $vendor->id)->where('compliance_rule_id', $rule->id)->where('status', 'open')->update(['status' => 'resolved', 'resolved_at' => now(), 'resolved_by' => null]);
             return;
         }
-
-        ComplianceFlag::updateOrCreate(
-            [
-                'vendor_id' => $vendor->id,
-                'compliance_rule_id' => $rule->id,
-                'status' => 'open',
-            ],
-            [
-                'compliance_result_id' => $complianceResult->id,
-                'severity' => $rule->severity,
-                'reason' => $details,
-                'metadata' => $metadata,
-                'flagged_at' => now(),
-                'resolved_at' => null,
-                'resolved_by' => null,
-            ]
-        );
+        ComplianceFlag::updateOrCreate(['vendor_id' => $vendor->id, 'compliance_rule_id' => $rule->id, 'status' => 'open'], ['compliance_result_id' => $complianceResult->id, 'severity' => $rule->severity, 'reason' => $details, 'metadata' => $metadata, 'flagged_at' => now(), 'resolved_at' => null, 'resolved_by' => null]);
     }
-
     /**
      * Check if vendor has all required documents.
      */
     protected function checkRequiredDocuments(Vendor $vendor, ComplianceRule $rule): array
     {
         $mandatoryTypes = DocumentType::where('is_mandatory', true)->pluck('id');
-        $uploadedTypes = $vendor->documents()
-            ->where('is_current', true)
-            ->where('verification_status', 'verified')
-            ->pluck('document_type_id');
-
+        $uploadedTypes = $vendor->documents()->where('is_current', true)->where('verification_status', 'verified')->pluck('document_type_id');
         $missingTypes = $mandatoryTypes->diff($uploadedTypes);
-
         if ($missingTypes->isEmpty()) {
-            return [
-                'status' => ComplianceResult::STATUS_PASS,
-                'details' => 'All mandatory documents are verified.',
-                'metadata' => [],
-            ];
+            return ['status' => ComplianceResult::STATUS_PASS, 'details' => __('All mandatory documents are verified.'), 'metadata' => []];
         }
-
         $missingNames = DocumentType::whereIn('id', $missingTypes)->pluck('display_name')->toArray();
-
-        return [
-            'status' => ComplianceResult::STATUS_FAIL,
-            'details' => 'Missing mandatory documents: '.implode(', ', $missingNames),
-            'metadata' => ['missing_document_ids' => $missingTypes->toArray()],
-        ];
+        return ['status' => ComplianceResult::STATUS_FAIL, 'details' => __('Missing mandatory documents: ') . implode(', ', $missingNames), 'metadata' => ['missing_document_ids' => $missingTypes->toArray()]];
     }
-
     /**
      * Check if any documents are expiring soon or expired.
      */
@@ -212,62 +115,28 @@ class ComplianceService
     {
         $warningDays = $rule->conditions['warning_days'] ?? 15;
         $warningDate = Carbon::now()->addDays($warningDays);
-
-        $expiringDocs = $vendor->documents()
-            ->where('is_current', true)
-            ->where('verification_status', VendorDocument::STATUS_VERIFIED)
-            ->whereNotNull('expiry_date')
-            ->whereHas('documentType', fn ($query) => $query->where('has_expiry', true))
-            ->where('expiry_date', '<=', $warningDate)
-            ->with('documentType')
-            ->get();
-
-        $expiredDocs = $expiringDocs->filter(fn ($doc) => Carbon::parse($doc->expiry_date)->isPast());
-        $soonToExpire = $expiringDocs->filter(fn ($doc) => ! Carbon::parse($doc->expiry_date)->isPast());
-
+        $expiringDocs = $vendor->documents()->where('is_current', true)->where('verification_status', VendorDocument::STATUS_VERIFIED)->whereNotNull('expiry_date')->whereHas('documentType', fn($query) => $query->where('has_expiry', true))->where('expiry_date', '<=', $warningDate)->with('documentType')->get();
+        $expiredDocs = $expiringDocs->filter(fn($doc) => Carbon::parse($doc->expiry_date)->isPast());
+        $soonToExpire = $expiringDocs->filter(fn($doc) => !Carbon::parse($doc->expiry_date)->isPast());
         if ($expiredDocs->isNotEmpty()) {
-            return [
-                'status' => ComplianceResult::STATUS_FAIL,
-                'details' => 'Expired documents: '.$expiredDocs->pluck('documentType.display_name')->implode(', '),
-                'metadata' => ['expired_document_ids' => $expiredDocs->pluck('id')->toArray()],
-            ];
+            return ['status' => ComplianceResult::STATUS_FAIL, 'details' => __('Expired documents: ') . $expiredDocs->pluck('documentType.display_name')->implode(', '), 'metadata' => ['expired_document_ids' => $expiredDocs->pluck('id')->toArray()]];
         }
-
         if ($soonToExpire->isNotEmpty()) {
-            return [
-                'status' => ComplianceResult::STATUS_WARNING,
-                'details' => 'Documents expiring soon: '.$soonToExpire->pluck('documentType.display_name')->implode(', '),
-                'metadata' => ['expiring_document_ids' => $soonToExpire->pluck('id')->toArray()],
-            ];
+            return ['status' => ComplianceResult::STATUS_WARNING, 'details' => __('Documents expiring soon: ') . $soonToExpire->pluck('documentType.display_name')->implode(', '), 'metadata' => ['expiring_document_ids' => $soonToExpire->pluck('id')->toArray()]];
         }
-
-        return [
-            'status' => ComplianceResult::STATUS_PASS,
-            'details' => 'No document expiry issues.',
-            'metadata' => [],
-        ];
+        return ['status' => ComplianceResult::STATUS_PASS, 'details' => __('No document expiry issues.'), 'metadata' => []];
     }
-
     /**
      * Check if vendor meets performance threshold.
      */
     protected function checkPerformanceThreshold(Vendor $vendor, ComplianceRule $rule): array
     {
         $threshold = $rule->conditions['min_score'] ?? 50;
-
         if ($vendor->performance_score >= $threshold) {
-            return [
-                'status' => ComplianceResult::STATUS_PASS,
-                'details' => "Performance score ({$vendor->performance_score}) meets threshold ({$threshold}).",
-            ];
+            return ['status' => ComplianceResult::STATUS_PASS, 'details' => __('Performance score (:performance_score) meets threshold (:threshold).', ['performance_score' => $vendor->performance_score, 'threshold' => $threshold])];
         }
-
-        return [
-            'status' => ComplianceResult::STATUS_FAIL,
-            'details' => "Performance score ({$vendor->performance_score}) below threshold ({$threshold}).",
-        ];
+        return ['status' => ComplianceResult::STATUS_FAIL, 'details' => __('Performance score (:performance_score) below threshold (:threshold).', ['performance_score' => $vendor->performance_score, 'threshold' => $threshold])];
     }
-
     /**
      * Determine overall compliance status based on score and blocking rules.
      */
@@ -276,15 +145,12 @@ class ComplianceService
         if ($hasBlockingFailure || $openFlags > 2) {
             return Vendor::COMPLIANCE_BLOCKED;
         }
-
         if ($score >= 80) {
             return Vendor::COMPLIANCE_COMPLIANT;
         }
-
         if ($score >= 50) {
             return Vendor::COMPLIANCE_AT_RISK;
         }
-
         return Vendor::COMPLIANCE_NON_COMPLIANT;
     }
 }
