@@ -1,291 +1,180 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import {
-    AdminLayout,
-    PageHeader,
-    DataTable,
-    Badge,
-    Button,
-    Modal,
-    ModalCancelButton,
-    ModalPrimaryButton,
-    StatCard,
-    StatGrid,
-} from '@/Components';
-
-export default function PaymentsIndex({ payments, stats, currentStatus }) {
-    const { auth } = usePage().props;
-    const can = auth?.can || {};
-
-    const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
-    const [selectedPayment, setSelectedPayment] = useState(null);
-    const [paymentRef, setPaymentRef] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('');
-
-    const handleAction = (paymentId, stage, action) => {
-        const route =
-            stage === 'ops'
-                ? `/admin/payments/${paymentId}/validate-ops`
-                : `/admin/payments/${paymentId}/approve-finance`;
-
-        if (action === 'reject') {
-            const comment = window.prompt('Enter rejection reason:');
-            if (!comment) {
-                return;
-            }
-
-            router.post(route, { action, comment });
-            return;
-        }
-
-        router.post(route, { action });
-    };
-
-    const handleMarkPaid = () => {
-        router.post(
-            `/admin/payments/${selectedPayment}/mark-paid`,
-            {
-                payment_reference: paymentRef,
-                payment_method: paymentMethod,
-            },
-            {
-                onSuccess: () => {
-                    setShowMarkPaidModal(false);
-                    setSelectedPayment(null);
-                    setPaymentRef('');
-                    setPaymentMethod('');
-                },
-            }
-        );
-    };
-
-    const statCards = [
-        { label: 'Pending Requests', value: stats?.pending || 0, icon: 'clock', color: 'warning' },
-        { label: 'Approved', value: stats?.approved || 0, icon: 'success', color: 'success' },
-        {
-            label: 'Total Paid',
-            value: `INR ${(stats?.paid || 0).toLocaleString('en-IN')}`,
-            icon: 'payments',
-            color: 'primary',
-        },
-        { label: 'Total Transactions', value: stats?.total || 0, icon: 'reports', color: 'info' },
-    ];
-
-    const columns = [
-        {
-            header: 'Reference',
-            render: (row) => (
-                <div className="space-y-1">
+import { AdminLayout, PageHeader, DataTable, Badge, Button, Modal, ModalCancelButton, ModalPrimaryButton, StatCard, StatGrid } from '@/Components';
+export default function PaymentsIndex({
+  payments,
+  stats,
+  currentStatus
+}) {
+  const {
+    auth
+  } = usePage().props;
+  const can = auth?.can || {};
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const handleAction = (paymentId, stage, action) => {
+    const route = stage === 'ops' ? `/admin/payments/${paymentId}/validate-ops` : `/admin/payments/${paymentId}/approve-finance`;
+    if (action === 'reject') {
+      const comment = window.prompt(t('Enter rejection reason:'));
+      if (!comment) {
+        return;
+      }
+      router.post(route, {
+        action,
+        comment
+      });
+      return;
+    }
+    router.post(route, {
+      action
+    });
+  };
+  const handleMarkPaid = () => {
+    router.post(`/admin/payments/${selectedPayment}/mark-paid`, {
+      payment_reference: paymentRef,
+      payment_method: paymentMethod
+    }, {
+      onSuccess: () => {
+        setShowMarkPaidModal(false);
+        setSelectedPayment(null);
+        setPaymentRef('');
+        setPaymentMethod('');
+      }
+    });
+  };
+  const statCards = [{
+    label: t('Pending Requests'),
+    value: stats?.pending || 0,
+    icon: 'clock',
+    color: 'warning'
+  }, {
+    label: t('Approved'),
+    value: stats?.approved || 0,
+    icon: 'success',
+    color: 'success'
+  }, {
+    label: t('Total Paid'),
+    value: `INR ${(stats?.paid || 0).toLocaleString('en-IN')}`,
+    icon: 'payments',
+    color: 'primary'
+  }, {
+    label: t('Total Transactions'),
+    value: stats?.total || 0,
+    icon: 'reports',
+    color: 'info'
+  }];
+  const columns = [{
+    header: t('Reference'),
+    render: row => <div className="space-y-1">
                     <div className="font-mono text-(--color-text-primary) font-medium">
                         {row.reference_number}
                     </div>
-                    {row.is_duplicate_flagged && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-(--color-warning-light) text-(--color-warning-dark)">
+                    {row.is_duplicate_flagged && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-(--color-warning-light) text-(--color-warning-dark)">
                             Duplicate Flag
-                        </span>
-                    )}
+                        </span>}
                 </div>
-            ),
-        },
-        {
-            header: 'Vendor',
-            render: (row) => (
-                <span className="text-(--color-text-secondary)">{row.vendor?.company_name}</span>
-            ),
-        },
-        {
-            header: 'Amount',
-            align: 'right',
-            render: (row) => (
-                <span className="text-(--color-text-primary) font-bold">
+  }, {
+    header: t('Vendor'),
+    render: row => <span className="text-(--color-text-secondary)">{row.vendor?.company_name}</span>
+  }, {
+    header: t('Amount'),
+    align: 'right',
+    render: row => <span className="text-(--color-text-primary) font-bold">
                     INR {parseFloat(row.amount).toLocaleString('en-IN')}
                 </span>
-            ),
-        },
-        { header: 'Status', render: (row) => <Badge status={row.status} /> },
-        {
-            header: 'Actions',
-            align: 'right',
-            render: (row) => {
-                const vendorIsCompliant = row.vendor?.compliance_status === 'compliant';
-                const isFinanceApprovalBlocked =
-                    row.status === 'pending_finance' &&
-                    Boolean(row.is_compliance_blocked) &&
-                    !vendorIsCompliant;
-
-                return (
-                    <div className="flex gap-2 justify-end items-center">
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => router.get(`/admin/payments/${row.id}`)}
-                        >
+  }, {
+    header: t('Status'),
+    render: row => <Badge status={row.status} />
+  }, {
+    header: t('Actions'),
+    align: 'right',
+    render: row => {
+      const vendorIsCompliant = row.vendor?.compliance_status === 'compliant';
+      const isFinanceApprovalBlocked = row.status === 'pending_finance' && Boolean(row.is_compliance_blocked) && !vendorIsCompliant;
+      return <div className="flex gap-2 justify-end items-center">
+                        <Button variant="secondary" size="sm" onClick={() => router.get(`/admin/payments/${row.id}`)}>
                             Review
                         </Button>
-                        {['requested', 'pending_ops'].includes(row.status) &&
-                            can.validate_payments && (
-                                <>
-                                    <Button
-                                        variant="success"
-                                        size="sm"
-                                        onClick={() => handleAction(row.id, 'ops', 'approve')}
-                                    >
+                        {['requested', 'pending_ops'].includes(row.status) && can.validate_payments && <>
+                                    <Button variant="success" size="sm" onClick={() => handleAction(row.id, 'ops', 'approve')}>
                                         Validate
                                     </Button>
-                                    <Button
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() => handleAction(row.id, 'ops', 'reject')}
-                                    >
+                                    <Button variant="danger" size="sm" onClick={() => handleAction(row.id, 'ops', 'reject')}>
                                         Reject
                                     </Button>
-                                </>
-                            )}
-                        {row.status === 'pending_finance' && can.approve_payments && (
-                            <>
-                                <Button
-                                    variant="success"
-                                    size="sm"
-                                    disabled={isFinanceApprovalBlocked}
-                                    onClick={() => handleAction(row.id, 'finance', 'approve')}
-                                >
-                                    {isFinanceApprovalBlocked ? 'Blocked' : 'Approve'}
+                                </>}
+                        {row.status === 'pending_finance' && can.approve_payments && <>
+                                <Button variant="success" size="sm" disabled={isFinanceApprovalBlocked} onClick={() => handleAction(row.id, 'finance', 'approve')}>
+                                    {isFinanceApprovalBlocked ? t('Blocked') : t('Approve')}
                                 </Button>
-                                <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => handleAction(row.id, 'finance', 'reject')}
-                                >
+                                <Button variant="danger" size="sm" onClick={() => handleAction(row.id, 'finance', 'reject')}>
                                     Reject
                                 </Button>
-                            </>
-                        )}
-                        {row.status === 'approved' && can.mark_paid && (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => {
-                                    setSelectedPayment(row.id);
-                                    setShowMarkPaidModal(true);
-                                }}
-                            >
+                            </>}
+                        {row.status === 'approved' && can.mark_paid && <Button variant="primary" size="sm" onClick={() => {
+          setSelectedPayment(row.id);
+          setShowMarkPaidModal(true);
+        }}>
                                 Mark Paid
-                            </Button>
-                        )}
-                        {['requested', 'pending_ops'].includes(row.status) &&
-                            !can.validate_payments && (
-                                <span className="text-xs text-(--color-text-tertiary) italic">
+                            </Button>}
+                        {['requested', 'pending_ops'].includes(row.status) && !can.validate_payments && <span className="text-xs text-(--color-text-tertiary) italic">
                                     Waiting for Ops
-                                </span>
-                            )}
-                        {row.status === 'pending_finance' && !can.approve_payments && (
-                            <span className="text-xs text-(--color-text-tertiary) italic">
+                                </span>}
+                        {row.status === 'pending_finance' && !can.approve_payments && <span className="text-xs text-(--color-text-tertiary) italic">
                                 Waiting for Finance
-                            </span>
-                        )}
-                        {row.status === 'approved' && !can.mark_paid && (
-                            <span className="text-xs text-(--color-text-tertiary) italic">
+                            </span>}
+                        {row.status === 'approved' && !can.mark_paid && <span className="text-xs text-(--color-text-tertiary) italic">
                                 Ready for Payment
-                            </span>
-                        )}
-                    </div>
-                );
-            },
-        },
-    ];
-
-    const statusFilters = [
-        'all',
-        'requested',
-        'pending_ops',
-        'pending_finance',
-        'approved',
-        'paid',
-        'rejected',
-    ];
-
-    const header = (
-        <PageHeader title="Payment Requests" subtitle="Manage vendor payment approvals" />
-    );
-
-    return (
-        <AdminLayout title="Payment Requests" activeNav="Payments" header={header}>
+                            </span>}
+                    </div>;
+    }
+  }];
+  const statusFilters = ['all', 'requested', 'pending_ops', 'pending_finance', 'approved', 'paid', 'rejected'];
+  const header = <PageHeader title={t('Payment Requests')} subtitle={t('Manage vendor payment approvals')} />;
+  return <AdminLayout title={t('Payment Requests')} activeNav="Payments" header={header}>
             <div className="space-y-8">
                 <StatGrid cols={6}>
-                    {statCards.map((stat, idx) => (
-                        <StatCard key={idx} {...stat} className="h-full" />
-                    ))}
+                    {statCards.map((stat, idx) => <StatCard key={idx} {...stat} className="h-full" />)}
                 </StatGrid>
 
                 <div className="flex gap-2 flex-wrap p-1 bg-(--color-bg-tertiary) rounded-xl inline-flex">
-                    {statusFilters.map((status) => (
-                        <Link
-                            key={status}
-                            href={`/admin/payments?status=${status}`}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                currentStatus === status
-                                    ? 'bg-(--color-bg-primary) text-(--color-text-primary) shadow-token-sm'
-                                    : 'text-(--color-text-tertiary) hover:text-(--color-text-primary) hover:bg-(--color-bg-primary)/50'
-                            }`}
-                        >
-                            {status.replace('_', ' ').charAt(0).toUpperCase() +
-                                status.replace('_', ' ').slice(1)}
-                        </Link>
-                    ))}
+                    {statusFilters.map(status => <Link key={status} href={`/admin/payments?status=${status}`} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${currentStatus === status ? 'bg-(--color-bg-primary) text-(--color-text-primary) shadow-token-sm' : 'text-(--color-text-tertiary) hover:text-(--color-text-primary) hover:bg-(--color-bg-primary)/50'}`}>
+                            {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+                        </Link>)}
                 </div>
 
-                <DataTable
-                    columns={columns}
-                    data={payments?.data || []}
-                    emptyMessage="No payment requests found"
-                />
+                <DataTable columns={columns} data={payments?.data || []} emptyMessage="No payment requests found" />
             </div>
 
-            <Modal
-                isOpen={showMarkPaidModal && can.mark_paid}
-                onClose={() => setShowMarkPaidModal(false)}
-                title="Mark as Paid"
-                footer={
-                    <>
+            <Modal isOpen={showMarkPaidModal && can.mark_paid} onClose={() => setShowMarkPaidModal(false)} title={t('Mark as Paid')} footer={<>
                         <ModalCancelButton onClick={() => setShowMarkPaidModal(false)} />
                         <ModalPrimaryButton onClick={handleMarkPaid} disabled={!paymentRef}>
-                            Confirm Payment
+                            {t('Confirm Payment')}
                         </ModalPrimaryButton>
-                    </>
-                }
-            >
+                    </>}>
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm font-medium text-(--color-text-secondary) mb-2 block">
-                            Payment Reference *
+                            {t('Payment Reference *')}
                         </label>
-                        <input
-                            type="text"
-                            value={paymentRef}
-                            onChange={(e) => setPaymentRef(e.target.value)}
-                            className="input-field w-full"
-                            placeholder="Transaction ID or UTR"
-                        />
+                        <input type="text" value={paymentRef} onChange={e => setPaymentRef(e.target.value)} className="input-field w-full" placeholder={t('Transaction ID or UTR')} />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-(--color-text-secondary) mb-2 block">
-                            Payment Method
+                            {t('Payment Method')}
                         </label>
-                        <select
-                            value={paymentMethod}
-                            onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="input-field w-full"
-                        >
-                            <option value="">Select method</option>
-                            <option value="NEFT">NEFT</option>
-                            <option value="RTGS">RTGS</option>
-                            <option value="IMPS">IMPS</option>
-                            <option value="UPI">UPI</option>
-                            <option value="Cheque">Cheque</option>
+                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="input-field w-full">
+                            <option value="">{t('Select method')}</option>
+                            <option value={t('NEFT')}>{t('NEFT')}</option>
+                            <option value={t('RTGS')}>{t('RTGS')}</option>
+                            <option value={t('IMPS')}>{t('IMPS')}</option>
+                            <option value={t('UPI')}>{t('UPI')}</option>
+                            <option value={t('Cheque')}>{t('Cheque')}</option>
                         </select>
                     </div>
                 </div>
             </Modal>
-        </AdminLayout>
-    );
+        </AdminLayout>;
 }
