@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-
 class RoleMiddleware
 {
     /**
@@ -16,21 +15,17 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
-
-        if (! $user) {
+        if (!$user) {
             return redirect()->route('login');
         }
-
         // Super admin bypasses all role checks
         if ($user->isSuperAdmin()) {
             return $next($request);
         }
-
         // Check if user has any of the required roles
-        if (! $user->hasAnyRole($roles)) {
-            abort(403, 'Unauthorized access.');
+        if (!$user->hasAnyRole($roles)) {
+            abort(403, __('Unauthorized access.'));
         }
-
         return $next($request);
     }
 }
